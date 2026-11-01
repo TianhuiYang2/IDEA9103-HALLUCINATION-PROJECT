@@ -1,32 +1,7 @@
-/*
-AI ACKNOWLEDGEMENT:
-Claude (Anthropic, 2026) assisted with generating and
-restructuring this user-input code. The student tested,
-reviewed and adapted the code for the final prototype.
+//AI ACKNOWLEDGEMENT:
+//Claude (Anthropic, 2026) assisted with generating
 
-USER INPUT MECHANIC
-The viewer's mouse acts like a lens moving through the
-hallucination space. There are three behaviours:
-
-1. HOVER  - shapes near the mouse grow and are pushed aside.
-            The space remembers where the mouse has been,
-            so the mouse leaves a trail that slowly fades.
-2. STAY   - if the mouse stays still, the lens slowly widens
-            and the shapes inside swell and turn yellow until
-            they swallow the space (Kusama's "self-obliteration").
-3. CLICK  - a click sends a ripple outward from the mouse.
-            While music plays, every beat also sends a ripple
-            from the mouse, so the viewer "conducts" the music.
-
-The music changes how strong the input is:
-louder music = a stronger lens.
-
-This file does NOT draw the scene. It works with ANY drawing:
-any scene can ask getInputAt(x, y) how the mouse affects a
-shape at that screen position, then use the answer.
-*/
-
-// ---------- Settings you can tweak ----------
+// basic settings
 const LENS_RADIUS = 130;      // size of the lens when the mouse is moving
 const LENS_RADIUS_MAX = 300;  // size of the lens after staying still
 const STILL_FRAMES = 180;     // frames of stillness to reach full effect (about 3 s)
@@ -38,13 +13,8 @@ const RIPPLE_LIFE = 80;       // how many frames a ripple lasts
 const RIPPLE_WIDTH = 45;      // how thick the ripple band is
 const OBLITERATE_COLOUR = [255, 197, 38]; // Kusama yellow
 
-// ---------- Values that change while running ----------
-/*
-  The trail memory is a grid laid over the screen.
-  Each square stores how recently the mouse touched it (0 to 1).
-  Because it remembers PLACES, not particular dots, it works
-  for every scene, even when the dots move or change.
-*/
+//Values change
+
 let trailGrid = [];
 let trailCols = 0;
 let trailRows = 0;
@@ -53,9 +23,9 @@ let stillTime = 0;          // how many frames the mouse has been still
 let ripples = [];           // every active ripple: { x, y, age }
 let inputLoudness = 0;      // latest loudness from the audio mechanic
 
-// ------------------------------------------------------------
+
 // Call once in setup(), AFTER createCanvas().
-// ------------------------------------------------------------
+
 function setupInput() {
   trailCols = ceil(width / TRAIL_CELL);
   trailRows = ceil(height / TRAIL_CELL);
@@ -66,12 +36,11 @@ function setupInput() {
   }
 }
 
-// ------------------------------------------------------------
+
 // Call once at the start of every draw().
 // audio = the object from getAudioFeatures()
-// ------------------------------------------------------------
 function updateInput(audio) {
-  // If the window was resized, rebuild the trail grid
+  
   if (trailCols !== ceil(width / TRAIL_CELL) ||
       trailRows !== ceil(height / TRAIL_CELL)) {
     setupInput();
@@ -110,7 +79,7 @@ function updateInput(audio) {
     }
   }
 
-  // ---- Ripples: one on every beat, then age them ----
+  //Ripples: one on every beat, then age them
   if (audio.playing && audio.beat > 0.99 && mouseIsInside()) {
     addRipple(mouseX, mouseY);
   }
@@ -121,19 +90,7 @@ function updateInput(audio) {
   ripples = ripples.filter(r => r.age < RIPPLE_LIFE);
 }
 
-// ------------------------------------------------------------
-// THE MAIN QUESTION any scene can ask:
-// "How does the mouse affect a shape at screen position (x, y)?"
-//
-// Returns:
-//   grow       - multiply the shape's size by this (1 = no change)
-//   pushX/Y    - add these to the shape's position
-//   obliterate - 0 to 1, how much to blend towards yellow
-//
-// NOTE: x and y must be SCREEN positions. If a scene draws
-// after translate(width / 2, height / 2), pass in
-// (x + width / 2, y + height / 2).
-// ------------------------------------------------------------
+
 function getInputAt(x, y) {
   let result = { grow: 1, pushX: 0, pushY: 0, obliterate: 0 };
 
@@ -147,7 +104,7 @@ function getInputAt(x, y) {
     closeness = 1 - d / lensRadius;
   }
 
-  // ---- 1. HOVER: trail memory + lens ----
+  //HOVER: trail memory + lens
   let memory = readTrail(x, y);
   let lensStrength = 1.2 + inputLoudness * 1.3;   // louder = stronger
   result.grow += memory * lensStrength;
@@ -158,11 +115,11 @@ function getInputAt(x, y) {
     result.pushY = ((y - mouseY) / d) * closeness * PUSH_DISTANCE;
   }
 
-  // ---- 2. STAY: obliteration ----
+  //STAY: obliteration
   result.obliterate = closeness * stillAmount;
   result.grow += result.obliterate * 2;
 
-  // ---- 3. CLICK / BEAT: ripples ----
+  //CLICK / BEAT: ripples
   for (let r of ripples) {
     let rippleRadius = r.age * RIPPLE_SPEED;
     let fade = 1 - r.age / RIPPLE_LIFE;           // weaker as it travels
@@ -183,10 +140,9 @@ function getInputAt(x, y) {
   return result;
 }
 
-// ------------------------------------------------------------
+
 // Helper: blend any colour towards Kusama yellow.
 // colour = [r, g, b]  ->  returns a new [r, g, b]
-// ------------------------------------------------------------
 function obliterateColour(colour, amount) {
   return [
     lerp(colour[0], OBLITERATE_COLOUR[0], amount),
@@ -195,17 +151,15 @@ function obliterateColour(colour, amount) {
   ];
 }
 
-// ------------------------------------------------------------
+
 // Add a ripple at a screen position (used by click and beat).
-// ------------------------------------------------------------
 function addRipple(x, y) {
   ripples.push({ x: x, y: y, age: 0 });
 }
 
-// ------------------------------------------------------------
+
 // Call from mousePressed() in the main sketch.
 // The first click starts the music; every click sends a ripple.
-// ------------------------------------------------------------
 function inputMousePressed() {
   if (!mouseIsInside()) {
     return;
@@ -218,11 +172,10 @@ function inputMousePressed() {
   addRipple(mouseX, mouseY);
 }
 
-// ------------------------------------------------------------
+
 // Draw a faint lens outline and ripple rings on top of
 // everything, so the viewer can see what the mouse is doing.
 // Call at the END of draw().
-// ------------------------------------------------------------
 function drawInputOverlay() {
   push();
   noFill();
@@ -254,7 +207,7 @@ function drawInputOverlay() {
   pop();
 }
 
-// ---------- Small helpers ----------
+
 
 // 0 while moving, rises to 1 after staying still
 function getStillAmount() {

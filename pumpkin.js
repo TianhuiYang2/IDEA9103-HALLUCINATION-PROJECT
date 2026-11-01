@@ -3,33 +3,9 @@ AI ACKNOWLEDGEMENT:
 Claude (Anthropic, 2026) assisted with generating and
 restructuring this pumpkin code. The student drew the
 pumpkin image, tested, reviewed and adapted the code.
-
-PUMPKIN (foreground)
-The pumpkin shape comes from the student's own drawing
-(assets/pumpkin.png). Like the Week 7 image-segment tutorial,
-the code reads the image's pixels, but here it uses them to
-find each lobe and fill it with its own polka dots.
-
-1. FIND THE LOBES   - neighbouring pixels of the same colour are
-                      grouped together. The thin white lines in the
-                      drawing keep each lobe separate.
-2. PLACE THE DOTS   - each lobe is filled row by row, from top to
-                      bottom, with evenly spaced dots. Every second
-                      row is shifted half a step, so the dots sit
-                      neatly between the dots above.
-                      Lighter (front) lobes get bigger dots;
-                      darker (side) lobes get smaller dots.
-3. STAY INSIDE      - every dot is checked so it fits completely inside
-                      its own lobe. Each dot also remembers how much
-                      "room" it has, so the mouse and the music can
-                      make it grow or move, but never past its lobe.
-4. CHANGE COLOUR    - each click sends a colour wave out from the mouse.
-                      As the wave passes, dots switch to the next colour
-                      scheme. Every scheme uses colours from the
-                      pumpkin's own palette (no black).
 */
 
-// ---------- Settings you can tweak ----------
+//Settings you can tweak
 const PUMPKIN_SCREEN_SIZE = 0.62;  // pumpkin size, as a share of the shorter screen side
 const EDGE_MARGIN = 3;             // pixels kept clear between a dot and its lobe edge
 const EDGE_CHECKS = 24;            // points checked around each dot's edge
@@ -43,12 +19,7 @@ const DARK_LOBE  = { r: 7,  gap: 11 };  // dark side lobes: smaller dots
 const COLOUR_WAVE_SPEED = 9;       // how fast the colour wave spreads (screen pixels per frame)
 const COLOUR_FADE = 0.15;          // how smoothly a dot changes colour (0-1)
 
-/*
-  Colour schemes, all taken from the pumpkin's own palette.
-  onLight = dot colour on the light / yellow lobes
-  onDark  = dot colour on the dark orange lobes and the stem
-  Each click moves to the next scheme.
-*/
+
 const COLOUR_SCHEMES = [
   { name: "cream",  onLight: [255, 255, 255], onDark: [255, 240, 205] },
   { name: "ember",  onLight: [214, 90, 30],   onDark: [255, 226, 140] },
@@ -57,7 +28,7 @@ const COLOUR_SCHEMES = [
   { name: "blush",  onLight: [236, 118, 92],  onDark: [255, 236, 200] }
 ];
 
-// ---------- Values filled in while running ----------
+//Values filled in while running
 let pumpkinImg;            // the drawing
 let lobeMap = [];          // for every pixel: which lobe it belongs to (0 = none)
 let lobes = [];            // info about each lobe: colour, brightness, pixel list
@@ -65,16 +36,14 @@ let pumpkinDots = [];      // every dot on the pumpkin
 let colourWaves = [];      // active colour waves: { x, y, age, scheme }
 let currentScheme = 0;     // which colour scheme the last click chose
 
-// ------------------------------------------------------------
+
 // Call in preload()
-// ------------------------------------------------------------
 function preloadPumpkin() {
   pumpkinImg = loadImage("assets/pumpkin.png");
 }
 
-// ------------------------------------------------------------
+
 // Call once in setup(). Finds the lobes, then places the dots.
-// ------------------------------------------------------------
 function setupPumpkin() {
   findLobes();
 
@@ -83,9 +52,8 @@ function setupPumpkin() {
   }
 }
 
-// ============================================================
-// STEP 1: FIND THE LOBES
-// ============================================================
+
+//FIND THE LOBES
 function findLobes() {
   pumpkinImg.loadPixels();
   let w = pumpkinImg.width;
@@ -101,11 +69,7 @@ function findLobes() {
       continue;
     }
 
-    /*
-      Flood fill: start from one pixel and keep spreading to
-      neighbours of (almost) the same colour. Everything reached
-      belongs to the same lobe.
-    */
+
     let pixelsInLobe = [];
     let toVisit = [start];
     lobeMap[start] = nextId;
@@ -162,7 +126,7 @@ function findLobes() {
   }
 }
 
-// A lobe pixel is solid (not transparent) and not the white outline
+//A lobe pixel is solid (not transparent) and not the white outline
 function isLobePixel(p) {
   let r = pumpkinImg.pixels[p * 4];
   let g = pumpkinImg.pixels[p * 4 + 1];
@@ -172,7 +136,7 @@ function isLobePixel(p) {
   return a > 200 && !isWhite;
 }
 
-// Are two pixels nearly the same colour?
+//Are two pixels nearly the same colour?
 function sameColour(p, q) {
   let dr = pumpkinImg.pixels[p * 4] - pumpkinImg.pixels[q * 4];
   let dg = pumpkinImg.pixels[p * 4 + 1] - pumpkinImg.pixels[q * 4 + 1];
@@ -180,7 +144,7 @@ function sameColour(p, q) {
   return abs(dr) + abs(dg) + abs(db) < 40;
 }
 
-// Which lobe is at image position (x, y)? 0 or -1 = none
+//Which lobe is at image position (x, y)? 0 or -1 = none
 function lobeAt(x, y) {
   x = round(x);
   y = round(y);
@@ -190,20 +154,19 @@ function lobeAt(x, y) {
   return lobeMap[y * pumpkinImg.width + x];
 }
 
-// ============================================================
-// STEP 2: PLACE THE DOTS (row by row, top to bottom)
-// ============================================================
+
+//PLACE THE DOTS (row by row, top to bottom)
 function placeDotsInLobe(lobeIndex) {
   let lobe = lobes[lobeIndex];
 
-  // Keep the original light/dark dot sizes and colour behaviour.
+  //Keep the original light/dark dot sizes and colour behaviour.
   let light = constrain(map(lobe.brightness, 150, 222, 0, 1), 0, 1);
   let baseR = lerp(DARK_LOBE.r, LIGHT_LOBE.r, light);
   let gap = lerp(DARK_LOBE.gap, LIGHT_LOBE.gap, light);
   let isDarkLobe = lobe.brightness < 175;
   let lobeWidth = lobe.maxX - lobe.minX;
 
-  // Narrow areas (e.g. the stem) still get smaller dots.
+  //Narrow areas (e.g. the stem) still get smaller dots.
   if (lobeWidth < (baseR * 2 + gap) * 2.5) {
     baseR *= 0.6;
   }
@@ -274,11 +237,7 @@ function findSpans(lobe, y) {
   return spans;
 }
 
-/*
-  Add a dot if it fits completely inside its lobe.
-  Near the curved edges a full-size dot may not fit,
-  so it is allowed to shrink a little (down to MIN_SHRINK).
-*/
+
 function addDotIfItFits(x, y, r, lobeId, isDarkLobe) {
   let size = r;
   while (size >= r * MIN_SHRINK) {
@@ -299,12 +258,7 @@ function addDotIfItFits(x, y, r, lobeId, isDarkLobe) {
   }
 }
 
-/*
-  Does a circle at (x, y) with radius r fit completely inside the lobe?
-  We check the centre, EDGE_CHECKS points around its edge (plus a
-  small margin) and the same number halfway out.
-  If any of them lands outside, it doesn't fit.
-*/
+
 function fitsInLobe(x, y, r, lobeId) {
   if (lobeAt(x, y) !== lobeId) {
     return false;
@@ -332,9 +286,8 @@ function findRoom(x, y, r, lobeId) {
   return room;
 }
 
-// ============================================================
-// STEP 4: COLOUR
-// ============================================================
+
+//COLOUR
 
 // The colour a dot should have in a given scheme
 function schemeColour(schemeIndex, onDark) {
@@ -342,9 +295,8 @@ function schemeColour(schemeIndex, onDark) {
   return onDark ? scheme.onDark : scheme.onLight;
 }
 
-// ------------------------------------------------------------
+
 // Call from mousePressed(): send a colour wave from the mouse.
-// ------------------------------------------------------------
 function pumpkinMousePressed() {
   if (!mouseIsInside()) {
     return;
@@ -353,9 +305,8 @@ function pumpkinMousePressed() {
   colourWaves.push({ x: mouseX, y: mouseY, age: 0, scheme: currentScheme });
 }
 
-// ============================================================
-// STEP 3 + 4: DRAW (with the mouse, music, time and colour)
-// ============================================================
+
+//DRAW (with the mouse, music, time and colour)
 function drawPumpkin(audio) {
   // Fit the pumpkin in the middle of the screen
   let size = min(width, height) * PUMPKIN_SCREEN_SIZE;
@@ -363,7 +314,7 @@ function drawPumpkin(audio) {
   // Time: the pumpkin breathes gently with the background scenes
   size *= 1 + 0.025 * getTimeBreath();
 
-  let s = size / pumpkinImg.width;             // image pixels -> screen pixels
+  let s = size / pumpkinImg.width;             // image pixels-screen pixels
   let left = width / 2 - size / 2;
   let top = height / 2 - size / 2;
 
@@ -384,7 +335,7 @@ function drawPumpkin(audio) {
     let screenX = left + d.x * s;
     let screenY = top + d.y * s;
 
-    // ---- Colour: has a colour wave reached this dot yet? ----
+    //Colour: has a colour wave reached this dot yet?
     for (let wave of colourWaves) {
       let waveRadius = wave.age * COLOUR_WAVE_SPEED;
       if (dist(screenX, screenY, wave.x, wave.y) < waveRadius) {
@@ -397,10 +348,10 @@ function drawPumpkin(audio) {
       d.colour[c] = lerp(d.colour[c], target[c], COLOUR_FADE);
     }
 
-    // ---- User input: how does the mouse affect this spot? ----
+    //User input: how does the mouse affect this spot?
     let input = getInputAt(screenX, screenY);
 
-    // ---- Music: louder / beats make dots swell. Smaller dots react more. ----
+    //Music: louder / beats make dots swell. Smaller dots react more
     let sizeReact = map(d.r, 4, 15, 1.4, 0.7);
     let audioGrow = 1 + (audio.loudness * 0.3 + audio.beat * 0.25) * sizeReact;
 
