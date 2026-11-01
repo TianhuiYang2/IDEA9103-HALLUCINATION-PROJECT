@@ -1,19 +1,22 @@
 // time-mechanic.js
 // Mechanic: TIME-BASED
-// Owner: Doris Zheng (unikey: 520646368)
+// Owner: Doris Zheng (unikey: jzhe3132)
 //
 // Time drives a psychedelic background made of 8 scenes inspired by Yayoi Kusama:
 //   1 white dots on black        2 black dots on white
-//   3 an abstract marbled colour-field (no shapes, just drifting painterly colour)
+//   3 a swirling tree of colourful flowing lines, erupting from a dark trunk
 //   4 Infinity Mirror Room dot tunnel        5 swaying dotted tentacles
 //   6 moving flow-field strokes (swirling lines, Starry Night style)
 //   7 rain landing on the ground and splashing into colourful puddles
 //   8 red "cracked canvas" spider-web threads
-// - Each scene "breathes" (zooms in and out) twice before the next scene fades in.
+// - Each scene breathes (zooms in and out) on a steady 6s cycle while it plays.
 // - Soft coloured glow-dust floats over the top and pulses with the same breath.
-// - noise() makes shapes drift/wobble smoothly, random() + randomSeed() give each
-//   dot/drop its own fixed size, position and phase (the brief asks for noise and
-//   random used together).
+// - TIME + PERLIN NOISE FUSION: noise() doesn't just decorate the visuals here -
+//   it decides HOW LONG each scene's own timer runs for (see sceneDurations in
+//   initTimeMechanic/sceneInfo), so the timed event that switches scenes is
+//   itself shaped by Perlin noise, not a flat fixed interval. noise() also
+//   drives every shape's drift/wobble; random() + randomSeed() give each
+//   dot/drop/branch its own fixed size, position and phase.
 //
 // Public functions (called from sketch.js):
 //   initTimeMechanic()   -> call once in setup()
@@ -23,24 +26,34 @@
 //   getSceneIndex()      -> which scene is playing (0-7), so other mechanics can react
 //   getTimeBreath()      -> 0-1 breathing value right now, so other mechanics can react
 
-const SCENE_LEN = 12;   // seconds per scene (two breath cycles)
-const BREATH_LEN = 6;   // seconds for one zoom in + zoom out
-const FADE_LEN = 2;     // seconds of cross-fade between scenes
+const SCENE_LEN_BASE = 12;   // the average/base seconds per scene - noise() stretches or
+                              // squashes each individual scene around this, see below
+const SCENE_LEN_SPREAD = 8;  // how many seconds noise() can add on top of the base
+const BREATH_LEN = 6;        // seconds for one zoom in + zoom out
+const FADE_LEN = 2;          // seconds of cross-fade between scenes
 const DOT_COUNT = 60;
 const RAIN_COUNT = 90;
-const PAINT_BLOB_COUNT = 38;
-// the palette for scene 3's abstract colour-field, matched to the reference image:
-// hot pink, magenta, cyan, violet, blue, red
-const PAINT_PALETTE = [330, 310, 180, 265, 210, 350];
+const SWIRL_STRAND_COUNT = 340;
 
 let timeDots = [];
-let flowJitter = [];     // fixed random offsets and colours for the flow-field strokes
-let rainDrops = [];      // fixed random timing/position/colour for each puddle
-let paintBlobs = [];     // fixed random position/angle/elongation/colour for each brush-stroke blob
-let timeShift = 0;       // extra seconds added by skipScene()
+let flowJitter = [];       // fixed random offsets and colours for the flow-field strokes
+let rainDrops = [];        // fixed random timing/position/colour for each puddle
+let swirlStrands = [];     // fixed random angle/colour/curl-rate for each swirling line strand
+let timeShift = 0;         // extra seconds added by skipScene()
+
+// HOW TIME AND PERLIN NOISE ACTUALLY FUSE IN THIS MECHANIC:
+// it isn't just "there's a timer AND there's noise somewhere" - noise() is what
+// DECIDES the timer's own length. Every scene gets its own fixed-but-different
+// playtime, sampled once from noise(sceneIndex) in initTimeMechanic() below, so
+// the thing that triggers each scene change (a timer reaching its length) has a
+// length that Perlin noise itself generated. sceneDurations/sceneStarts/cycleLen
+// hold that schedule; sceneInfo() is the lookup every other time function uses.
+let sceneDurations = [];   // each scene's own noise()-chosen length, in seconds
+let sceneStarts = [];      // cumulative start time of each scene within one full cycle
+let cycleLen = 0;          // total length of one pass through all 8 scenes
 
 // Order of scenes. Function declarations are hoisted, so this is safe.
-const scenes = [sceneDotsDark, sceneDotsLight, sceneAbstractColor, sceneDotTunnel,
+const scenes = [sceneDotsDark, sceneDotsLight, sceneSwirlTree, sceneDotTunnel,
                  sceneTentacles, sceneFlow, sceneRain, sceneWeb];
 
 function initTimeMechanic() {
@@ -76,24 +89,60 @@ function initTimeMechanic() {
     });
   }
 
-  // fixed position/angle/elongation for every abstract paint-blob "brush stroke" -
-  // random() gives each one a stable home, noise() (used in the scene itself) only
-  // nudges it a little and wobbles its edge
-  paintBlobs = [];
-  for (let i = 0; i < PAINT_BLOB_COUNT; i++) {
-    paintBlobs.push({
-      x: random(),
-      y: random(),
-      angle: random(TWO_PI),
-      elong: random(1.6, 4.2),
-      sizeSeed: random(),
+  // fixed starting angle/colour/curl-rate for every swirling strand - random()
+  // gives each one a stable identity; noise() (used in the scene itself) only
+  // jitters its path as it flows outward from the trunk
+  swirlStrands = [];
+  for (let i = 0; i < SWIRL_STRAND_COUNT; i++) {
+    const r = random();
+    // weighted like the reference: lots of green/gold "canopy" colour, a good
+    // amount of blue, a smaller core of deep red/maroon and black near the trunk
+    const colorIndex = r < 0.3 ? 0 : r < 0.55 ? 1 : r < 0.75 ? 2 : r < 0.9 ? 3 : 4;
+    swirlStrands.push({
+      angle0: random(-PI * 0.97, -PI * 0.03),   // fans out from almost-left to almost-right, pointing up
+      x0: random(-1, 1),                        // small spread of starting points along the trunk top
+      colorIndex,
+      curlRate: random(0.018, 0.05),
+      lenSeed: random(),
       driftSeed: random(1000)
     });
   }
+
+  // this is the actual time + Perlin noise fusion: noise() (not random()) picks
+  // how long EACH scene gets to play, so the timer that drives scene-switching
+  // is itself shaped by Perlin noise rather than being a flat, even 12s/12s/12s.
+  // Using noise() here instead of random() matters: noise(i) for whole-number i
+  // is smooth across neighbours, so consecutive scenes get gently-varying
+  // playtimes rather than totally unrelated ones, which keeps the pacing feeling
+  // intentional instead of jittery.
+  sceneDurations = [];
+  sceneStarts = [];
+  cycleLen = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const n = noise(i * 13.7, 42.0);               // 0-1, smooth across scene index
+    const dur = SCENE_LEN_BASE - SCENE_LEN_SPREAD / 2 + n * SCENE_LEN_SPREAD;
+    sceneStarts.push(cycleLen);
+    sceneDurations.push(dur);
+    cycleLen += dur;
+  }
+}
+
+// looks up which scene is playing at a given moment, how far into that scene's
+// own (noise-chosen) duration we are, and how long that scene actually runs for
+function sceneInfo(t) {
+  const tc = ((t % cycleLen) + cycleLen) % cycleLen;
+  let idx = 0;
+  while (idx < scenes.length - 1 && tc >= sceneStarts[idx + 1]) idx++;
+  return { idx, localT: tc - sceneStarts[idx], dur: sceneDurations[idx] };
 }
 
 function skipScene() {
-  timeShift += SCENE_LEN - (timeNow() % SCENE_LEN);
+  const t = timeNow();
+  const info = sceneInfo(t);
+  const nextIdx = (info.idx + 1) % scenes.length;
+  const targetTc = sceneStarts[nextIdx];          // 0 when wrapping back to scene 0
+  const tc = ((t % cycleLen) + cycleLen) % cycleLen;
+  timeShift += ((targetTc - tc) + cycleLen) % cycleLen;
 }
 
 function timeNow() {
@@ -101,11 +150,11 @@ function timeNow() {
 }
 
 function getSceneIndex() {
-  return floor(timeNow() / SCENE_LEN) % scenes.length;
+  return sceneInfo(timeNow()).idx;
 }
 
 function getTimeBreath() {
-  return timeBreath(timeNow() % SCENE_LEN);
+  return timeBreath(sceneInfo(timeNow()).localT);
 }
 
 // 0 -> 1 -> 0 over BREATH_LEN seconds. Smooth, starts at 0.
@@ -127,17 +176,20 @@ function hsbToRgba(h, s, v, a) {
 // ---------- main background ----------
 function drawTimeBackground() {
   const t = timeNow();
-  const idx = floor(t / SCENE_LEN) % scenes.length;
-  const local = t % SCENE_LEN;
+  const info = sceneInfo(t);
 
-  drawSceneLayer(scenes[idx], t, local, 1);
+  drawSceneLayer(scenes[info.idx], t, info.localT, 1);
 
-  // Last seconds of a scene: the next one fades in on top.
-  const fadeStart = SCENE_LEN - FADE_LEN;
-  if (local > fadeStart) {
-    const a = constrain((local - fadeStart) / FADE_LEN, 0, 1);
+  // Last seconds of a scene: the next one fades in on top. info.dur is that
+  // scene's own noise()-chosen length, so faster scenes fade sooner and
+  // longer ones get more time at full strength, rather than every scene
+  // using the same fixed cutoff.
+  const fadeStart = info.dur - FADE_LEN;
+  if (info.localT > fadeStart) {
+    const a = constrain((info.localT - fadeStart) / FADE_LEN, 0, 1);
     const eased = a * a * (3 - 2 * a);
-    drawSceneLayer(scenes[(idx + 1) % scenes.length], t, local - SCENE_LEN, eased);
+    const nextIdx = (info.idx + 1) % scenes.length;
+    drawSceneLayer(scenes[nextIdx], t, info.localT - info.dur, eased);
   }
 }
 
@@ -162,12 +214,8 @@ function fillBG(c) {
 // ---------- scene 1: white dots on black, breathing ----------
 function sceneDotsDark(t, b, R) {
   fillBG(0);
-  colorMode(HSB, 360, 100, 100, 1);
   noStroke();
-  // dots are still basically white, but carry a slow-drifting iridescent tint
-  // (low saturation, hue cycles over ~45s - far too slow to flash or strobe)
-  // so the field has a faint oil-slick shimmer instead of being flat white
-  const hueBase = (t * 8) % 360;
+  fill(255);   // plain white dots, no colour tint - pure black/white only, as requested
   const gap = max(width, height) / 22;
   let row = 0;
   for (let y = -height / 2 - gap; y < height / 2 + gap; y += gap * 0.87) {
@@ -176,7 +224,6 @@ function sceneDotsDark(t, b, R) {
       // noise gives each region its own slow rhythm, breathing makes all dots swell together
       const n = noise((px + width / 2) * 0.004, (y + height / 2) * 0.004, t * 0.2);
       const size = gap * constrain(0.1 + 0.9 * (0.3 + 0.7 * b) * n * 1.3, 0.05, 1);
-      fill((hueBase + n * 120) % 360, 22, 100, 1);
       circle(px, y, size);
     }
     row++;
@@ -202,51 +249,97 @@ function sceneDotsLight(t, b, R) {
   }
 }
 
-// ---------- scene 3: an abstract marbled colour-field ----------
-// Replaces every earlier version of this scene (fish-scale nets, paramecia/eyes,
-// a pine forest with mist) - no recognisable objects at all now, just drifting
-// painterly colour, modelled on a marbled hot-pink/magenta/cyan/violet reference
-// image. It's built from ~38 soft, elongated "brush-stroke" blobs (random() gives
-// each one a fixed home position/angle/elongation/size, see paintBlobs in
-// initTimeMechanic) drawn with the canvas 'multiply' blend so overlapping strokes
-// darken and saturate like real mixed paint instead of just looking washed-out.
-// noise() wobbles every stroke's edge and drifts it slowly; every stroke's size
-// also pulses gently with the shared breath, so the whole field feels alive.
-function sceneAbstractColor(t, b, R) {
-  colorMode(HSB, 360, 100, 100, 1);  // restored automatically by the pop() in drawSceneLayer
-  fillBG([330, 10, 97]);             // very pale pink-white base, like the gaps in the reference
-  const ctx = drawingContext;
-  const prevComposite = ctx.globalCompositeOperation;
-  ctx.globalCompositeOperation = 'multiply';
+// ---------- scene 3: a swirling tree of colourful flowing lines ----------
+// Replaces every earlier version of this scene. Modelled on a reference image of
+// a tree whose whole canopy is drawn as hundreds of flowing, hand-drawn coloured
+// strands (green, blue, deep red, gold, black) spiralling up and out of a solid
+// dark trunk into one big wind-swept vortex. Each strand (see swirlStrands in
+// initTimeMechanic) starts at a fixed random() angle/colour near the trunk's top;
+// as it's drawn it curls via a steady swirl rate PLUS noise()-driven jitter, so
+// the shape is a coherent vortex rather than scribbled chaos, but still feels
+// hand-drawn and alive. The whole canopy slowly rotates and breathes with time.
+function sceneSwirlTree(t, b, R) {
+  fillBG([248, 246, 240]);   // pale background so the coloured strands pop, like the reference
+  drawSwirlTrunk(t, b);
+  drawSwirlStrands(t, b, R);
+}
+
+// a short, solid, slightly tapering dark trunk at the bottom-centre, that the
+// whole swirl of coloured strands appears to erupt out of
+function drawSwirlTrunk(t, b) {
   noStroke();
-
-  for (let i = 0; i < paintBlobs.length; i++) {
-    const pb = paintBlobs[i];
-    const driftX = (noise(pb.driftSeed, t * 0.03) - 0.5) * width * 0.08;
-    const driftY = (noise(pb.driftSeed + 500, t * 0.03) - 0.5) * height * 0.08;
-    const cx = (pb.x - 0.5) * width * 1.05 + driftX;
-    const cy = (pb.y - 0.5) * height * 1.05 + driftY;
-
-    const hue = PAINT_PALETTE[i % PAINT_PALETTE.length];
-    const hueJitter = (noise(pb.driftSeed + 200, t * 0.05) - 0.5) * 16;
-    const baseR = min(width, height) * (0.05 + 0.09 * pb.sizeSeed) * (0.8 + 0.4 * b);
-
-    push();
-    translate(cx, cy);
-    rotate(pb.angle + sin(t * 0.04 + pb.driftSeed) * 0.12);
-    fill((hue + hueJitter + 360) % 360, 72, 92, 0.55);
-    beginShape();
-    for (let k = 0; k <= 20; k++) {
-      const ang = (k / 20) * TWO_PI;
-      const wob = noise(pb.driftSeed + cos(ang) * 1.4, pb.driftSeed + sin(ang) * 1.4, t * 0.12);
-      const rx = baseR * pb.elong * (0.7 + 0.5 * wob);
-      const ry = baseR * (0.7 + 0.5 * wob);
-      curveVertex(cos(ang) * rx, sin(ang) * ry);
-    }
-    endShape(CLOSE);
-    pop();
+  fill(20, 18, 16, 245);
+  const bottom = height / 2 + 60;
+  const top = -height * 0.05;
+  const steps = 14;
+  beginShape();
+  for (let k = 0; k <= steps; k++) {
+    const s = k / steps;
+    const y = lerp(bottom, top, s);
+    const sway = (noise(5, s * 1.4, t * 0.03) - 0.5) * width * 0.015;
+    const w = lerp(width * 0.05, width * 0.012, s);
+    vertex(sway - w, y);
   }
-  ctx.globalCompositeOperation = prevComposite;
+  for (let k = steps; k >= 0; k--) {
+    const s = k / steps;
+    const y = lerp(bottom, top, s);
+    const sway = (noise(5, s * 1.4, t * 0.03) - 0.5) * width * 0.015;
+    const w = lerp(width * 0.05, width * 0.012, s);
+    vertex(sway + w, y);
+  }
+  endShape(CLOSE);
+}
+
+// hundreds of coloured strands spiralling up and out of the trunk, reaching all
+// the way out past the screen edges so the whole canvas fills up, not just a
+// patch near the trunk. A steady curl rate near the trunk makes each strand
+// start as a coherent spiral arm, then loosens the further out it gets so the
+// outer reaches actually travel out to the corners instead of spiralling back
+// on themselves; noise() jitters the path so it still reads as hand-drawn. On
+// top of that, how many strands are even visible yet GROWS over this scene's
+// own duration (see sceneInfo/progress below) - new strands keep appearing the
+// longer the scene plays, like it's continuously being drawn rather than
+// popping in all at once, then it starts filling in again fresh next time this
+// scene comes around.
+function drawSwirlStrands(t, b, R) {
+  const palette = [[95, 140, 45], [45, 110, 180], [150, 35, 40], [200, 145, 35], [22, 20, 18]];
+  const originY = -height * 0.02;
+  const globalSpin = t * 0.015;     // the whole vortex slowly rotates over time
+  noFill();
+
+  const info = sceneInfo(t);
+  const progress = constrain(info.localT / info.dur, 0, 1);
+  const strandsToShow = min(swirlStrands.length, 24 + floor(progress * (swirlStrands.length - 24)));
+
+  for (let i = 0; i < strandsToShow; i++) {
+    const sw = swirlStrands[i];
+    let px = sw.x0 * width * 0.03;
+    let py = originY;
+    let ang = sw.angle0;   // fixed fan-out starting direction, roughly upward
+    let r = 4;
+    const segs = 46 + floor(sw.lenSeed * 46);
+    const stepLen = min(width, height) * (0.014 + 0.012 * sw.lenSeed) * (0.85 + 0.3 * b);
+    const maxR = R * 1.1;   // reaches past the canvas corners, so the vortex fills the whole screen
+    const col = palette[sw.colorIndex];
+
+    stroke(col[0], col[1], col[2], 170);
+    strokeWeight(1 + 0.7 * b);
+    beginShape();
+    vertex(px, py);
+    for (let k = 0; k < segs; k++) {
+      // curl is strongest near the trunk (a tight spiral) and relaxes outward
+      // into an almost-straight flow, which is what lets strands actually reach
+      // the far edges of the canvas instead of spiralling back on themselves
+      const tightness = 1 - constrain(r / maxR, 0, 1) * 0.92;
+      const jitter = (noise(sw.driftSeed + k * 0.3, t * 0.06) - 0.5) * 0.22;
+      ang += sw.curlRate * tightness + jitter + 0.0015 * sin(globalSpin + sw.driftSeed);
+      px += cos(ang) * stepLen;
+      py += sin(ang) * stepLen;
+      r += stepLen;
+      vertex(px, py);
+    }
+    endShape();
+  }
 }
 
 // ---------- scene 4: dot tunnel, Infinity Mirror Room (white dots on black, spokes) ----------
@@ -551,16 +644,16 @@ function sceneWeb(t, b, R) {
 
 // a single bright red thread that spins itself out from the centre like a spider
 // actually laying silk - it is recomputed fresh each frame from k=0 up to however
-// far the CURRENT scene cycle has got (localT / SCENE_LEN), so it visibly grows
-// longer and the web looks more thickly woven the longer this scene plays, then
-// starts spinning a brand new path next time this scene comes around. The path
-// itself is a true random walk (a fresh random-ish direction every step via
-// noise(), no steady turning bias) rather than a smooth spiral, so it reads as
-// erratic spider silk instead of circling; it's gently pulled back once it
+// far into THIS scene's own noise()-chosen duration we are (see sceneInfo), so it
+// visibly grows longer and the web looks more thickly woven the longer this scene
+// plays, then starts spinning a brand new path next time this scene comes around.
+// The path itself is a true random walk (a fresh random-ish direction every step
+// via noise(), no steady turning bias) rather than a smooth spiral, so it reads
+// as erratic spider silk instead of circling; it's gently pulled back once it
 // wanders near the web's outer edge so it stays inside the net.
 function drawSpinningThread(t, b, extent) {
-  const localT = ((t % SCENE_LEN) + SCENE_LEN) % SCENE_LEN;
-  const progress = constrain(localT / SCENE_LEN, 0, 1);
+  const info = sceneInfo(t);
+  const progress = constrain(info.localT / info.dur, 0, 1);
   const totalSamples = 420;
   const samplesToShow = floor(progress * totalSamples);
   if (samplesToShow < 2) return;
@@ -634,7 +727,7 @@ function drawMazeWalker(t, b, extent, spokes, rings) {
 // 'lighter' so it adds light instead of smudging dark patches onto the scene.
 function drawTimeDots() {
   const t = timeNow();
-  const b = timeBreath(t % SCENE_LEN);      // same breath as the scenes (12 is a multiple of 6)
+  const b = getTimeBreath();                // same breath value as whichever scene is playing
   const ctx = drawingContext;
   noStroke();
 
