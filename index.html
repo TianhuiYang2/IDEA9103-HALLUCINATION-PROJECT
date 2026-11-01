@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dancing Pumpkin</title>
+    <link rel="stylesheet" href="style.css" />
 
-    <title>Sketch</title>
+    <!-- p5.js + p5.sound -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
 
-    <link rel="stylesheet" type="text/css" href="style.css">
-
-    <script src="libraries/p5.min.js"></script>
-    <script src="libraries/p5.sound.min.js"></script>
-    <script src="time-mechanic.js"></script>
+    <!-- Each person's mechanic -->
+    <script src="time-mechanic.js"></script>   <!-- Doris: time-based background -->
+    <script src="audio-mechanic.js"></script>  <!-- Tianhui: music analysis -->
+    <script src="input-mechanic.js"></script>  <!-- Jenna: mouse interaction -->
+    <script src="pumpkin.js"></script>         <!-- Jenna: dotted pumpkin -->
   </head>
 
   <body>
+    <!-- Main sketch: calls everyone's functions in layers -->
     <script src="sketch.js"></script>
   </body>
 </html>
