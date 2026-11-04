@@ -2,6 +2,15 @@
 // Mechanic: TIME-BASED
 // Owner: Doris Zheng (unikey: jzhe3132)
 //
+// AI ACKNOWLEDGEMENT:
+// Claude (Anthropic, 2026) assisted with generating and iterating on the
+// scene visuals and the time/noise scheduling logic in this file. The
+// student (Doris Zheng) directed every creative decision - which scenes to
+// keep, which colours/shapes/speeds to use, how the time-based switching
+// and Perlin noise should combine - tested each version in the browser, and
+// asked for revisions until the visuals and behaviour matched her own
+// intent. The student can explain how every function below works.
+//
 // Time drives a psychedelic background made of 8 scenes inspired by Yayoi Kusama:
 //   1 white dots on black        2 black dots on white
 //   3 a swirling tree of colourful flowing lines, erupting from a dark trunk
