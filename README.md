@@ -17,14 +17,38 @@ to sound and touch, never quite the same twice.
 
 ## Techniques
 
-- **Time-based (Doris):** `millis()` drives an automatic cycle through 8
-  background scenes, each with its own breathing (zoom in/out) animation
-  and a cross-fade into the next scene.
-- **Perlin noise and randomness (supporting technique, Doris):** `noise()`
-  does more than decorate the shapes - it is also used to generate how
-  long each scene plays for, so the timer that switches scenes is itself
-  shaped by Perlin noise rather than a fixed interval. `random()` /
-  `randomSeed()` give each dot, drop, and line strand a fixed identity.
+- **Time-based background, with Perlin noise as a supporting technique
+(Doris)** - `millis()` drives an automatic cycle through 8 background
+scenes, each with its own breathing (zoom in/out) animation and a
+cross-fade into the next scene. `noise()` does more than decorate the
+shapes in each scene - it also decides how long each scene plays for,
+so the timer that switches scenes is itself shaped by Perlin noise
+rather than a fixed interval. `random()` / `randomSeed()` give each
+dot, drop and line strand a fixed identity.
+
+This mechanic is built from Yayoi Kusama's dots and nets specifically.
+She has spoken about hallucinations she experienced as a child, and
+dots became her way of carrying two ideas at once - infinity, and a
+form dissolving into something endless (what she calls
+self-obliteration). Red pumpkins are rarer in her work than her
+well-known yellow ones, and for her the red points to a more
+hallucinatory, inward side of her experience; I wanted this background
+to carry that same feeling into something that actually moves.
+
+A quick scene-by-scene note:
+- Scenes 1 & 2 - dots on black and on white, Kusama's most repeated
+  element; scene 2 adds a ripple that spreads outward from the centre
+  like a sound wave moving through the dots.
+- Scene 3 - hundreds of coloured line strands spiral outward from a
+  trunk like leaves, with more appearing the longer the scene plays.
+- Scene 4 - an Infinity Mirror Room-style dot tunnel.
+- Scene 5 - dotted tentacles that bulge and twist like octopus arms.
+- Scene 6 - a moving flow field inspired by Van Gogh's brushwork and
+  Petros Vrellis' "Starry Night Interactive Animation" (2012).
+- Scene 7 - rain landing on the ground and splashing into puddles.
+- Scene 8 - a red, cracked spider-web, inspired by one of Kusama's
+  dense red net/thread installations - it gives the feeling of
+  something being caught and held inside the web.
 - **Audio (Tianhui):** `p5.Amplitude` and `p5.FFT` analyse the loaded
   track's overall loudness and its bass/mid/treble frequency bands in
   real time, and a simple beat-detection check (comparing the current
