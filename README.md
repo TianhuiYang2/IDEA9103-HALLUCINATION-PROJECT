@@ -2,6 +2,41 @@
 
 Open `index.html` with a local server (e.g. VS Code Live Server). Opening the file directly will block the music and image from loading.
 
+## Inspiration
+
+Our project reinterprets Yayoi Kusama's visual language - repeated polka
+dots, Infinity Net patterns, and her pumpkin sculptures - as an
+interactive digital piece. The dotted pumpkin at the centre echoes her
+"Dancing Pumpkin" and dot-covered sculpture series, while the shifting
+background scenes (dot grids, a red cracked-web texture inspired by the
+gallery wall behind her "Small Pumpkin Paintings", and swirling coloured
+lines) draw on the way her installations use repetition and colour to
+create an immersive, almost hallucinatory space. We wanted the piece to
+feel like stepping inside one of her rooms: constantly moving, reacting
+to sound and touch, never quite the same twice.
+
+## Techniques
+
+- **Time-based (Doris):** `millis()` drives an automatic cycle through 8
+  background scenes, each with its own breathing (zoom in/out) animation
+  and a cross-fade into the next scene.
+- **Perlin noise and randomness (supporting technique, Doris):** `noise()`
+  does more than decorate the shapes - it is also used to generate how
+  long each scene plays for, so the timer that switches scenes is itself
+  shaped by Perlin noise rather than a fixed interval. `random()` /
+  `randomSeed()` give each dot, drop, and line strand a fixed identity.
+- **Audio (Tianhui):** `p5.Amplitude` and `p5.FFT` analyse the loaded
+  track's overall loudness and its bass/mid/treble frequency bands in
+  real time, and a simple beat-detection check (comparing the current
+  bass level against its rolling average) flags musical beats.
+- **User input (Jenna):** mouse position drives a growing "lens" and a
+  fading trail grid; staying still lets dots swell until they fill their
+  shape, and every click (or detected beat) sends an outward ripple.
+- All four mechanics come together on the central pumpkin: its dots are
+  placed inside Jenna's lobe-detection system, sized/pushed by mouse
+  input, grown by the music's loudness and beat, and the whole pumpkin
+  gently breathes in time with Doris's background cycle.
+
 ## Files
 
 | File | Owner | What it does |
@@ -19,6 +54,25 @@ Open `index.html` with a local server (e.g. VS Code Live Server). Opening the fi
 - **Click**: first click starts the music; every click sends a ripple (beats send ripples too) and a colour wave that switches the dots to the next colour scheme
 - **SPACE**: play / pause music
 - **N**: next background scene
+
+## AI Acknowledgement
+
+ChatGPT and Claude were used to help generate and restructure parts of
+each team member's code (see the acknowledgement comment at the top of
+each mechanic file for details on that file specifically). Every team
+member tested, reviewed, and adjusted the AI-assisted code to fit the
+final design, and can explain how their own file works.
+
+## External References
+
+- Music: Databend. (2026). *Dark Electronic Pulse Background*. Pixabay.
+  Pixabay Content License.
+- The red cracked-line web texture in the background (scene 8) is based
+  on the gallery wall behind Yayoi Kusama's "Small Pumpkin Paintings"
+  (Omer Tiroche Gallery, London), recoloured and rebuilt as a web of
+  radial and ring threads.
+- The flowing-stroke background scene (scene 6) is inspired by Petros
+  Vrellis' "Starry Night Interactive Animation" (2012).
 
 ## Credits
 
