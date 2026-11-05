@@ -108,7 +108,7 @@ function initTimeMechanic() {
     // amount of blue, a smaller core of deep red/maroon and black near the trunk
     const colorIndex = r < 0.3 ? 0 : r < 0.55 ? 1 : r < 0.75 ? 2 : r < 0.9 ? 3 : 4;
     swirlStrands.push({
-      angle0: random(-PI * 0.97, -PI * 0.03),   // fans out from almost-left to almost-right, pointing up
+      angle0: random(-PI, PI),                  // fans out a full 360 degrees around the trunk top
       x0: random(-1, 1),                        // small spread of starting points along the trunk top
       colorIndex,
       curlRate: random(0.018, 0.05),
@@ -328,7 +328,7 @@ function drawSwirlStrands(t, b, R) {
     let r = 4;
     const segs = 46 + floor(sw.lenSeed * 46);
     const stepLen = min(width, height) * (0.014 + 0.012 * sw.lenSeed) * (0.85 + 0.3 * b);
-    const maxR = R * 1.1;   // reaches past the canvas corners, so the vortex fills the whole screen
+    const maxR = R * 1.3;   // bigger ring now that strands fan out in every direction
     const col = palette[sw.colorIndex];
 
     stroke(col[0], col[1], col[2], 170);
