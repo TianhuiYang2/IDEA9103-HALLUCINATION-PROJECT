@@ -648,46 +648,56 @@ function sceneWeb(t, b, R) {
   }
 
   drawSpinningThread(t, b, extent);
-  drawMazeWalker(t, b, extent, spokes, rings);
 }
 
-// a single bright red thread that spins itself out from the centre like a spider
-// actually laying silk - it is recomputed fresh each frame from k=0 up to however
-// far into THIS scene's own noise()-chosen duration we are (see sceneInfo), so it
-// visibly grows longer and the web looks more thickly woven the longer this scene
-// plays, then starts spinning a brand new path next time this scene comes around.
-// The path itself is a true random walk (a fresh random-ish direction every step
-// via noise(), no steady turning bias) rather than a smooth spiral, so it reads
-// as erratic spider silk instead of circling; it's gently pulled back once it
-// wanders near the web's outer edge so it stays inside the net.
+// several bright red threads that each spin themselves out from the centre like
+// a spider actually laying silk, one layer at a time - layer 0 starts right away,
+// and each later layer only starts once the one before it is partway done, so the
+// web keeps getting MORE threads piled on top of each other the longer this scene
+// plays, instead of just one thread slowly growing. Each layer uses its own noise
+// offset so its path is different from the others (not the same line repeated),
+// which is what makes the overlapping layers actually read as a denser, messier
+// web rather than a single thread traced several times. Every layer resets and
+// starts spinning fresh again next time this scene comes around.
+const WEB_THREAD_COUNT = 4;
+
 function drawSpinningThread(t, b, extent) {
   const info = sceneInfo(t);
   const progress = constrain(info.localT / info.dur, 0, 1);
   const totalSamples = 420;
-  const samplesToShow = floor(progress * totalSamples);
-  if (samplesToShow < 2) return;
 
-  noFill();
-  stroke(235, 60, 55, 220);      // a brighter, lighter red than the grid - reads as the "live" thread
-  strokeWeight(1 + 1 * b);
+  for (let layer = 0; layer < WEB_THREAD_COUNT; layer++) {
+    // stagger each layer's start so they pile up over time instead of all
+    // appearing together - layer 0 starts at progress 0, later layers wait
+    const layerStart = layer * 0.18;
+    const layerProgress = constrain((progress - layerStart) / (1 - layerStart), 0, 1);
+    const samplesToShow = floor(layerProgress * totalSamples);
+    if (samplesToShow < 2) continue;
 
-  beginShape();
-  let px = 0, py = 0;
-  vertex(px, py);
-  for (let k = 1; k <= samplesToShow; k++) {
-    const ang = noise(k * 0.14, 500) * TWO_PI * 3;     // freshly-random heading each step - no spiral bias
-    const stepLen = extent * (0.012 + 0.01 * noise(k * 0.09, 900));
-    let nx = px + cos(ang) * stepLen;
-    let ny = py + sin(ang) * stepLen;
-    const dist = sqrt(nx * nx + ny * ny);
-    if (dist > extent * 0.95) {               // nudge back in if it wanders past the web's edge
-      nx *= 0.9;
-      ny *= 0.9;
+    const seedOffset = layer * 733.1;   // gives every layer its own, different random path
+
+    noFill();
+    stroke(235, 60 - layer * 8, 55 + layer * 10, 190 - layer * 20);
+    strokeWeight(max(0.6, 1 + 1 * b - layer * 0.15));
+
+    beginShape();
+    let px = 0, py = 0;
+    vertex(px, py);
+    for (let k = 1; k <= samplesToShow; k++) {
+      const ang = noise(k * 0.14 + seedOffset, 500 + seedOffset) * TWO_PI * 3;
+      const stepLen = extent * (0.012 + 0.01 * noise(k * 0.09 + seedOffset, 900 + seedOffset));
+      let nx = px + cos(ang) * stepLen;
+      let ny = py + sin(ang) * stepLen;
+      const dist = sqrt(nx * nx + ny * ny);
+      if (dist > extent * 0.95) {             // nudge back in if it wanders past the web's edge
+        nx *= 0.9;
+        ny *= 0.9;
+      }
+      vertex(nx, ny);
+      px = nx; py = ny;
     }
-    vertex(nx, ny);
-    px = nx; py = ny;
+    endShape();
   }
-  endShape();
 }
 
 // a glowing dot that travels only along the web's own lines - first sideways along
@@ -767,3 +777,4 @@ function drawTimeDots() {
 
   ctx.globalCompositeOperation = prevComposite;
 }
+
