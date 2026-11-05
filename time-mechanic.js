@@ -666,7 +666,9 @@ function drawSpinningThread(t, b, extent) {
   const progress = constrain(info.localT / info.dur, 0, 1);
   const totalSamples = 420;
 
-  for (let layer = 0; layer < WEB_THREAD_COUNT; layer++) {
+  // draw back-to-front: layer 0 is the deepest, most solid thread and is
+  // painted last so it always sits on top of the fainter layers behind it
+  for (let layer = WEB_THREAD_COUNT - 1; layer >= 0; layer--) {
     // stagger each layer's start so they pile up over time instead of all
     // appearing together - layer 0 starts at progress 0, later layers wait
     const layerStart = layer * 0.18;
@@ -676,9 +678,22 @@ function drawSpinningThread(t, b, extent) {
 
     const seedOffset = layer * 733.1;   // gives every layer its own, different random path
 
+    // depthT: 0 = front layer (deep, solid red), 1 = back layer (pale, faint)
+    const depthT = layer / (WEB_THREAD_COUNT - 1);
     noFill();
-    stroke(235, 60 - layer * 8, 55 + layer * 10, 190 - layer * 20);
-    strokeWeight(max(0.6, 1 + 1 * b - layer * 0.15));
+    stroke(
+      lerp(195, 255, depthT),
+      lerp(25, 150, depthT),
+      lerp(30, 150, depthT),
+      lerp(215, 70, depthT)
+    );
+    strokeWeight(max(0.5, lerp(1.6, 0.6, depthT) + 1 * b - layer * 0.1));
+
+    // rotate each layer by its own fixed angle so the 4 threads read as
+    // separate webs overlapping at different angles, not one thicker web
+    const layerAngle = layer * radians(37) + (noise(layer * 91.7, 300) - 0.5) * 0.6;
+    push();
+    rotate(layerAngle);
 
     beginShape();
     let px = 0, py = 0;
@@ -697,6 +712,7 @@ function drawSpinningThread(t, b, extent) {
       px = nx; py = ny;
     }
     endShape();
+    pop();
   }
 }
 
@@ -777,4 +793,3 @@ function drawTimeDots() {
 
   ctx.globalCompositeOperation = prevComposite;
 }
-
