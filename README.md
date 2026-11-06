@@ -1,6 +1,8 @@
 # IDEA9103-HALLUCINATION-PROJECT — Dancing Pumpkin (Group SB)
 
 Open `index.html` with a local server (e.g. VS Code Live Server). Opening the file directly will block the music and image from loading.
+<img width="1910" height="1035" alt="3351793936157_ pic_hd" src="https://github.com/user-attachments/assets/c316bd0c-4c1c-4de2-bf83-d9aa014f124a" />
+<img width="1910" height="1035" alt="3361793936159_ pic_hd" src="https://github.com/user-attachments/assets/12a55df0-1ca7-4038-b523-fa1992409abe" />
 
 
 
@@ -41,16 +43,19 @@ A quick scene-by-scene note:
 - Scenes 1 & 2 - dots on black and on white, Kusama's most repeated
   element; scene 2 adds a ripple that spreads outward from the centre
   like a sound wave moving through the dots.
-- Scene 3 - hundreds of coloured line strands spiral outward from a
-  trunk like leaves, with more appearing the longer the scene plays.
+- Scene 3 - hundreds of coloured line strands burst outward from a trunk in a full 360-degree spread, like leaves catching in every direction, with more strands appearing the longer the scene plays.
 - Scene 4 - an Infinity Mirror Room-style dot tunnel.
 - Scene 5 - dotted tentacles that bulge and twist like octopus arms.
 - Scene 6 - a moving flow field inspired by Van Gogh's brushwork and
   Petros Vrellis' "Starry Night Interactive Animation" (2012).
 - Scene 7 - rain landing on the ground and splashing into puddles.
-- Scene 8 - a red, cracked spider-web, inspired by one of Kusama's
-  dense red net/thread installations - it gives the feeling of
-  something being caught and held inside the web.
+- Scene 8 - a red, cracked spider-web built from several overlapping thread layers at different angles and depths (one solid, dark red thread up front, paler ones fading behind it), plus loose stray threads that keep scattering across the web the longer the scene plays - inspired by one of Kusama’s dense red net/thread installations, it gives the feeling of something being caught and held inside the web.
+- <img width="2096" height="1126" alt="3411793938437_ pic" src="https://github.com/user-attachments/assets/8c364bb3-64e1-4c0b-8a49-2971a61eace8" />
+Scene 7 - rain landing and splashing into puddles, the clearest example of time + noise fusion
+<img width="1886" height="960" alt="3391793938423_ pic" src="https://github.com/user-attachments/assets/9e0f305a-2bf4-4f84-a366-cb4310ff9da4" />
+Scene 5 - dotted tentacles swaying on a yellow background
+<img width="1958" height="1100" alt="3421793938448_ pic" src="https://github.com/user-attachments/assets/dc2e2563-8d82-4dda-ab84-e17a7f11facc" />
+Scene 8 - the red web with layered, overlapping threads at different depths
 - **Audio (Tianhui):** `p5.Amplitude` and `p5.FFT` analyse the loaded
   track's overall loudness and its bass/mid/treble frequency bands in
   real time, and a simple beat-detection check (comparing the current
