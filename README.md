@@ -1,7 +1,7 @@
 # IDEA9103-HALLUCINATION-PROJECT — Dancing Pumpkin (Group SB)
 
 Open `index.html` with a local server (e.g. VS Code Live Server). Opening the file directly will block the music and image from loading.
-![Uploading 3361793936159_.pic_hd.jpg…]()
+
 
 
 ## Inspiration
