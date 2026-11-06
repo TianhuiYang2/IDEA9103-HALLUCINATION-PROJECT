@@ -43,10 +43,12 @@ const FADE_LEN = 2;          // seconds of cross-fade between scenes
 const DOT_COUNT = 60;
 const RAIN_COUNT = 90;
 const SWIRL_STRAND_COUNT = 340;
+const STRAY_LINE_COUNT = 28;
 
 let timeDots = [];
 let flowJitter = [];       // fixed random offsets and colours for the flow-field strokes
 let rainDrops = [];        // fixed random timing/position/colour for each puddle
+let webStrayLines = [];    // loose straight red threads scattered beside the main web
 let swirlStrands = [];     // fixed random angle/colour/curl-rate for each swirling line strand
 let timeShift = 0;         // extra seconds added by skipScene()
 
@@ -114,6 +116,21 @@ function initTimeMechanic() {
       curlRate: random(0.018, 0.05),
       lenSeed: random(),
       driftSeed: random(1000)
+    });
+  }
+
+  // loose straight threads scattered around the woven web - each is just a
+  // random chord inside the web's circle, with its own random depth (how
+  // dark/solid vs pale/faint it looks) and its own random "reveal point" in
+  // the scene's timeline, so they don't all snap in at once but keep turning
+  // up, like stray silk drifting across the real web the longer it plays
+  webStrayLines = [];
+  for (let i = 0; i < STRAY_LINE_COUNT; i++) {
+    webStrayLines.push({
+      a1: random(TWO_PI), r1: sqrt(random()),
+      a2: random(TWO_PI), r2: sqrt(random()),
+      depth: random(1),
+      revealT: random(0.85)
     });
   }
 
@@ -648,6 +665,37 @@ function sceneWeb(t, b, R) {
   }
 
   drawSpinningThread(t, b, extent);
+  drawWebStrayLines(t, b, extent);
+}
+
+// scattered straight red threads drawn over/beside the woven web - unlike the
+// curved spinning threads above, these are plain straight chords at random
+// spots, each with its own random depth (near 0 = dark and solid, near 1 =
+// pale and faint) so they read as loose bits of silk at different distances,
+// not one uniform layer. They appear one by one as the scene plays (each has
+// its own fixed revealT from initTimeMechanic), so the tangle keeps growing
+// messier the longer this scene is on screen.
+function drawWebStrayLines(t, b, extent) {
+  const info = sceneInfo(t);
+  const progress = constrain(info.localT / info.dur, 0, 1);
+
+  for (const ln of webStrayLines) {
+    if (progress < ln.revealT) continue;
+
+    const x1 = cos(ln.a1) * ln.r1 * extent;
+    const y1 = sin(ln.a1) * ln.r1 * extent;
+    const x2 = cos(ln.a2) * ln.r2 * extent;
+    const y2 = sin(ln.a2) * ln.r2 * extent;
+
+    stroke(
+      lerp(190, 255, ln.depth),
+      lerp(20, 140, ln.depth),
+      lerp(25, 135, ln.depth),
+      lerp(160, 55, ln.depth) + 40 * b
+    );
+    strokeWeight(lerp(1.1, 0.4, ln.depth));
+    line(x1, y1, x2, y2);
+  }
 }
 
 // several bright red threads that each spin themselves out from the centre like
