@@ -1,7 +1,11 @@
 <img width="1910" height="1035" alt="3361793936159_ pic_hd" src="https://github.com/user-attachments/assets/3438bad7-a15d-4fd3-82d8-7fdd19008667" /># IDEA9103-HALLUCINATION-PROJECT
+Eight scene screenshots：
 <img width="2164" height="1074" alt="3431793938466_ pic" src="https://github.com/user-attachments/assets/2b9d16be-d9a1-4d14-92b8-a83c2438656a" />
-<img width="2164" height="1074" alt="3431793938466_ pic" src="https://github.com/user-attachments/assets/9145ce97-e4f1-41b2-a97b-433acfa6127d" />
+<img width="2272" height="1304" alt="3441793938466_ pic" src="https://github.com/user-attachments/assets/99fc4dd2-38b9-47a7-9687-7dd64690727f" />
 <img width="2128" height="1038" alt="3371793938423_ pic" src="https://github.com/user-attachments/assets/2c73e50d-faca-44f2-9e0c-014857d91e1f" />
+<img width="1886" height="960" alt="3391793938423_ pic" src="https://github.com/user-attachments/assets/98467db2-b4fc-4620-a57b-7eee98fecf32" />
+
+
 <img width="1660" height="886" alt="3381793938423_ pic" src="https://github.com/user-attachments/assets/07d94885-da91-479d-82ac-66883bb59437" />
 <img width="1928" height="1086" alt="3401793938430_ pic" src="https://github.com/user-attachments/assets/943975e8-8e50-4758-adb0-71a03f78fde0" />
 <img width="2096" height="1126" alt="3411793938437_ pic" src="https://github.com/user-attachments/assets/32f87b04-54de-4a77-aa90-17db462474f6" />
